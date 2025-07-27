@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template
 from flask_cors import CORS
 
 def create_app():
@@ -10,7 +10,7 @@ def create_app():
 
     @app.route("/")
     def home():
-        return "<h1>gwdai home</h1>"
+        return render_template("gwdapi.html")
 
 
     return app

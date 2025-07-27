@@ -14,35 +14,44 @@ def chat():
 
 @bp.route('/v1/convo', methods=['POST'])
 def convo():
-    audio_input = request.files['audio'].read()
+    try:
+        # get audio (flask object)
+        audio_input = request.files['audio'].read()
 
-    wav_bytes, _ = (
-        ffmpeg
-        .input('pipe:0')
-        .output('pipe:1', format='wav')
-        .run(input=audio_input, capture_stdout=True, capture_stderr=True)
-    )
+        # convert audio file to bytes
+        wav_bytes, _ = (
+            ffmpeg
+            .input('pipe:0')
+            .output('pipe:1', format='wav')
+            .run(input=audio_input, capture_stdout=True, capture_stderr=True)
+        )
 
-    response = ai.chat.completions.create(
-        model="gpt-4o-audio-preview",
-        modalities=["text","audio"],
-        audio={"voice":"alloy","format":"wav"},
-        messages=[
-            {
-                "role":"user",
-                "content": [
-                    {
-                        "type":"input_audio",
-                        "input_audio": {
-                            "data": b64encode(wav_bytes).decode(),
-                            "format": "wav"
+        response = ai.chat.completions.create(
+            model="gpt-4o-audio-preview",
+            modalities=["text","audio"],
+            audio={"voice":"alloy","format":"wav"},
+            messages=[
+                {
+                    "role":"user",
+                    "content": [
+                        {
+                            "type":"input_audio",
+                            "input_audio": {
+                                # convert bytes to b64 bytes, then to string
+                                "data": b64encode(wav_bytes).decode(),
+                                "format": "wav"
+                            }
                         }
-                    }
-                ]
-            }
-        ]
-    )
-    
+                    ]
+                }
+            ]
+        )
+        
 
-    reply_wav = b64decode(response.choices[0].message.audio.data)
-    return send_file(BytesIO(reply_wav), mimetype='audio/wav')
+        reply_wav = b64decode(response.choices[0].message.audio.data)
+        return send_file(BytesIO(reply_wav), mimetype='audio/wav')
+
+    except Exception as e:
+        print(f"\033[91m {e} \033[0m")
+        return jsonify({"error":str(e)})
+
